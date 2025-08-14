@@ -1,53 +1,74 @@
 import { useState } from "react";
+import "./App.css"; // We'll create this CSS file
 
 export default function App() {
   const [form, setForm] = useState({ name: "", email: "", date: "", time: "" });
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("Submitting...");
+    setLoading(true);
+    setStatus({ msg: "Submitting...", ok: null });
 
-    const res = await fetch("/.netlify/functions/reserve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
-    });
+    try {
+      const res = await fetch("/.netlify/functions/reserve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      setStatus({ ok: true, msg: "Reservation submitted successfully! Check your email." });
-      e.target.reset();
-    } else {
-      setStatus({ ok: false, msg: data.error || "Submission failed." });
+      if (res.ok) {
+        setStatus({ msg: data.message, ok: true });
+        e.target.reset();
+      } else {
+        setStatus({ msg: data.error || "Submission failed.", ok: false });
+      }
+    } catch (err) {
+      setStatus({ msg: "Network error. Try again.", ok: false });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: "2rem auto", fontFamily: "sans-serif" }}>
-      <h2>Café Reservation</h2>
-      <form onSubmit={handleSubmit}>
-        <label>Name</label>
-        <input name="name" value={form.name} onChange={handleChange} required />
+    <div className="container">
+      <h2>Cafe Reservation</h2>
+      <form onSubmit={handleSubmit} className="reservation-form">
+        <label>
+          Name
+          <input name="name" value={form.name} onChange={handleChange} required />
+        </label>
 
-        <label>Email</label>
-        <input type="email" name="email" value={form.email} onChange={handleChange} required />
+        <label>
+          Email
+          <input type="email" name="email" value={form.email} onChange={handleChange} required />
+        </label>
 
-        <label>Date</label>
-        <input type="date" name="date" value={form.date} onChange={handleChange} required />
+        <label>
+          Date
+          <input type="date" name="date" value={form.date} onChange={handleChange} required />
+        </label>
 
-        <label>Time</label>
-        <input type="time" name="time" value={form.time} onChange={handleChange} required />
+        <label>
+          Time
+          <input type="time" name="time" value={form.time} onChange={handleChange} required />
+        </label>
 
-        <button type="submit">Reserve</button>
+        <button type="submit" disabled={loading}>
+          {loading ? <span className="spinner"></span> : "Reserve"}
+        </button>
       </form>
 
-      {status && <p>{status}</p>}
+      {status && (
+        <p className={`status-message ${status.ok === true ? "success" : status.ok === false ? "error" : ""}`}>
+          {status.msg}
+        </p>
+      )}
     </div>
   );
 }
