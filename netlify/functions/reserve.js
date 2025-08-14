@@ -1,82 +1,61 @@
 import { createClient } from '@supabase/supabase-js';
+import Mailgun from 'mailgun.js';
+import formData from 'form-data';
 
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-);
+const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
-const FROM_EMAIL = process.env.FROM_EMAIL; // e.g., "Cafe Bookings <bookings@yourdomain.com>"
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL; // your email
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAILGUN_API_KEY,
+    url: 'https://api.mailgun.net'
+});
 
 export async function handler(event) {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-    }
-
     try {
+        // 1️⃣ Check API key
+        const apiKey = event.headers['x-api-key'];
+        if (apiKey !== process.env.RESERVATION_API_KEY) {
+            return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden' }) };
+        }
+
         const data = JSON.parse(event.body);
 
-        // Insert into Supabase
+        // Optional: Add reCAPTCHA verification here if you have the token
+        // const token = data.token;
+
+        // 2️⃣ Insert into Supabase
         const { error } = await supabase.from('cafe_reservations').insert({
             name: data.name,
             email: data.email,
             date: data.date,
-            time: data.time
+            time: data.time,
+            phone: data.phone,
+            guests: data.guests,
+            requests: data.requests
         });
 
         if (error) throw error;
 
-        // Send email to admin
-        await sendMail({
-            to: ADMIN_EMAIL,
-            subject: `New Cafe Reservation from ${data.name}`,
-            html: `
-        <p><b>Name:</b> ${data.name}</p>
-        <p><b>Email:</b> ${data.email}</p>
-        <p><b>Date:</b> ${data.date}</p>
-        <p><b>Time:</b> ${data.time}</p>
-      `
+        // 3️⃣ Send email to admin
+        await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+            from: process.env.FROM_EMAIL,
+            to: process.env.ADMIN_EMAIL,
+            subject: 'New Reservation',
+            text: `New reservation:\nName: ${data.name}\nEmail: ${data.email}\nDate: ${data.date}\nTime: ${data.time}\nPhone: ${data.phone}\nGuests: ${data.guests}\nRequests: ${data.requests}`
         });
 
-        // Send confirmation email to customer
-        await sendMail({
+        // 4️⃣ Send confirmation to customer
+        await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+            from: process.env.FROM_EMAIL,
             to: data.email,
-            subject: 'Your Cafe Reservation Confirmation',
-            html: `
-        <p>Hi ${data.name},</p>
-        <p>Thank you for reserving a table with us!</p>
-        <p><b>Date:</b> ${data.date}</p>
-        <p><b>Time:</b> ${data.time}</p>
-        <p>We look forward to seeing you at the cafe.</p>
-      `
+            subject: 'Reservation Confirmed',
+            text: `Hello ${data.name},\nYour reservation for ${data.date} at ${data.time} is confirmed.\nSee you soon!`
         });
 
-        return { statusCode: 200, body: JSON.stringify({ message: 'Reservation successful! Confirmation sent.' }) };
+        return { statusCode: 200, body: JSON.stringify({ message: 'Reservation successful!' }) };
     } catch (err) {
         console.error(err);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Reservation failed. Try again later.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
     }
-}
-
-async function sendMail({ to, subject, html }) {
-    const auth = Buffer.from(`api:${MAILGUN_API_KEY}`).toString('base64');
-    const form = new URLSearchParams({
-        from: FROM_EMAIL,
-        to,
-        subject,
-        html
-    });
-
-    const res = await fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: form
-    });
-
-    if (!res.ok) console.error('Mailgun error:', await res.text());
 }
