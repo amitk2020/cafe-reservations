@@ -22,8 +22,11 @@ export async function handler(event) {
         const { error } = await supabase.from('cafe_reservations').insert({
             name: data.name,
             email: data.email,
+            phone: data.phone,
+            guests: data.guests ? parseInt(data.guests) : null,
             date: data.date,
-            time: data.time
+            time: data.time,
+            requests: data.requests
         });
 
         if (error) throw error;
@@ -33,11 +36,14 @@ export async function handler(event) {
             to: ADMIN_EMAIL,
             subject: `New Cafe Reservation from ${data.name}`,
             html: `
-        <p><b>Name:</b> ${data.name}</p>
-        <p><b>Email:</b> ${data.email}</p>
-        <p><b>Date:</b> ${data.date}</p>
-        <p><b>Time:</b> ${data.time}</p>
-      `
+                <p><b>Name:</b> ${data.name}</p>
+                <p><b>Email:</b> ${data.email}</p>
+                <p><b>Phone:</b> ${data.phone}</p>
+                <p><b>Guests:</b> ${data.guests}</p>
+                <p><b>Date:</b> ${data.date}</p>
+                <p><b>Time:</b> ${data.time}</p>
+                <p><b>Requests:</b> ${data.requests || "-"}</p>
+            `
         });
 
         // Send confirmation email to customer

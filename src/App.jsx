@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./App.css"; // We'll create this CSS file
 
 export default function App() {
-  const [form, setForm] = useState({ name: "", email: "", date: "", time: "" });
+  const [form, setForm] = useState({ name: "", email: "", date: "", time: "", phone: "", guests: "", requests: "" });
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -50,6 +50,16 @@ export default function App() {
         </label>
 
         <label>
+          Phone
+          <input type="tel" name="phone" value={form.phone} onChange={handleChange} required pattern="[0-9\-\+\s]+" placeholder="e.g. 555-1234" />
+        </label>
+
+        <label>
+          Guests
+          <input type="number" name="guests" value={form.guests} onChange={handleChange} required min="1" max="20" placeholder="Number of guests" />
+        </label>
+
+        <label>
           Date
           <input type="date" name="date" value={form.date} onChange={handleChange} required />
         </label>
@@ -57,6 +67,11 @@ export default function App() {
         <label>
           Time
           <input type="time" name="time" value={form.time} onChange={handleChange} required />
+        </label>
+
+        <label>
+          Requests
+          <textarea name="requests" value={form.requests} onChange={handleChange} placeholder="Any special requests?" rows={2} />
         </label>
 
         <button type="submit" disabled={loading}>
