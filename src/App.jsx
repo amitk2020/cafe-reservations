@@ -15,11 +15,17 @@ export default function App() {
     const res = await fetch("/.netlify/functions/reserve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
+      body: JSON.stringify(formData)
     });
 
     const data = await res.json();
-    setStatus(data.message || data.error);
+
+    if (res.ok) {
+      setStatus({ ok: true, msg: "Reservation submitted successfully! Check your email." });
+      e.target.reset();
+    } else {
+      setStatus({ ok: false, msg: data.error || "Submission failed." });
+    }
   };
 
   return (
