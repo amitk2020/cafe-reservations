@@ -26,6 +26,7 @@ const ContactForm = () => {
             data-netlify="true"
             netlify-honeypot="bot-field"
             onSubmit={handleSubmit}
+            className="reservation-form"
         >
             <input type="hidden" name="form-name" value="contact" />
 
