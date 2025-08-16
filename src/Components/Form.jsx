@@ -4,21 +4,26 @@ const ContactForm = () => {
     const [submitted, setSubmitted] = useState(false);
 
     const handleSubmit = (e) => {
+        // Let Netlify handle the POST, but we can still prevent default page reload
         e.preventDefault();
 
         const form = e.target;
-        const data = new FormData(form);
 
-        // Encode the form data for Netlify
-        const encodedData = new URLSearchParams(data).toString();
+        // Create a hidden iframe to submit the form without navigating away
+        const iframe = document.createElement("iframe");
+        iframe.name = "hidden_iframe";
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
 
-        fetch("/", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: encodedData,
-        })
-            .then(() => setSubmitted(true))
-            .catch((err) => alert("Error submitting form: " + err));
+        form.target = "hidden_iframe";
+
+        // Listen for submission
+        iframe.onload = () => {
+            setSubmitted(true);
+            document.body.removeChild(iframe);
+        };
+
+        form.submit();
     };
 
     return (
@@ -32,19 +37,10 @@ const ContactForm = () => {
                     name="contact"
                     method="POST"
                     data-netlify="true"
-                    netlify-honeypot="bot-field"
-                    className="reservation-form"
                     onSubmit={handleSubmit}
                 >
-                    {/* Hidden input for Netlify to detect the form */}
+                    {/* Required for Netlify to detect the form */}
                     <input type="hidden" name="form-name" value="contact" />
-
-                    {/* Honeypot field */}
-                    <p hidden>
-                        <label>
-                            Don’t fill this out if you’re human: <input name="bot-field" />
-                        </label>
-                    </p>
 
                     <p>
                         <label>
