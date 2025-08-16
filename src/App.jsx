@@ -38,7 +38,7 @@ export default function App() {
 
   return (
     <div className="container">
-      <h2>Cafe Reservation</h2>
+      <h2>Contact Form</h2>
       <ContactForm />
       {/* <form onSubmit={handleSubmit} className="reservation-form">
         <label>
